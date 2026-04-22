@@ -5,6 +5,7 @@ This repository uses zero-crossing pitch detection, OSC-over-IP, and Pure Data t
 
 Requirements:
     Hardware:
+    
         32-bit float audio interface with USB-A cable
         Apple Mac (Should be compatible with other operating systems with adjustments to MIDI device and network setup)
         Ethernet cable
