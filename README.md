@@ -51,7 +51,9 @@ Hardware:
 - Ethernet cable
 
 Software:
-- 
+- A C++ compiler (e.g. Clang)
+- ALSA audio system
+- liblo
 
 ### Steps:
 1.  Power on the Raspberry Pi and connect it to the host computer via the ethernet cable
@@ -63,12 +65,16 @@ Software:
     ```
     git clone https://github.com/olliewales8421/Audio-to-MIDI-for-Raspberry-Pi
     ```
-4.  Using 
+4.  Compile the main program
+    ```
+    clang++ main.cpp -o main -lasound -lm -llo
+    ```
+5.  Using 
     ```
     sudo nmtui
     ```
     navigate to the ethernet connection and manually change the IPv4 address to 192.168.2.2/24, and the gateway and DNS server to 192.168.2.1
-5.  Use
+6.  Use
     ```
     crontab -e
     ```
