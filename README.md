@@ -74,8 +74,7 @@ Software:
     ```
     and add the line
     ```
-    @reboot ./main 192.168.2.1 9000 &
+    @reboot sudo ./main 192.168.2.1 9000 &
 7.  Close the connection and power off the Pi
-8.  
     
     
