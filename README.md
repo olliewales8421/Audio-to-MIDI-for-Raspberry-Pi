@@ -65,23 +65,27 @@ Software:
     ```
     git clone https://github.com/olliewales8421/Audio-to-MIDI-for-Raspberry-Pi
     ```
-4.  Compile the main program
+4.  Navigate to the repository directory
+    ```
+    cd Audio-to-MIDI-for-Raspberry-Pi
+    ```
+5.  Compile the main program
     ```
     clang++ main.cpp -o main -lasound -lm -llo
     ```
-5.  Using 
+6.  Using 
     ```
     sudo nmtui
     ```
     navigate to the ethernet connection and manually change the IPv4 address to 192.168.2.2/24, and the gateway and DNS server to 192.168.2.1
-6.  Use
+7.  Use
     ```
     crontab -e
     ```
     and add the line
     ```
     @reboot sudo Audio-to-MIDI-for-Raspberry-Pi/main 192.168.2.1 9000 &
-7.  Close the connection and power off the Pi
-8.  Follow the steps of the section further up
+8.  Close the connection and power off the Pi
+9.  Follow the steps of the section further up
     
     
