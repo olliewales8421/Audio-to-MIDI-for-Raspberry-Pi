@@ -1,5 +1,5 @@
 # Audio-to-MIDI-for-Raspberry-Pi
-This repository uses zero-crossing pitch detection, OSC-over-IP, and Pure Data to achieve guitar-to-MIDI functionality via flagship-series Raspberry Pi without the direct MIDI capability found only in the smaller Pi models
+This repository uses zero-crossing pitch detection, OSC-over-IP, and Pure Data to achieve guitar-to-MIDI functionality via flagship-series Raspberry Pi without the direct MIDI capability found only in the smaller Pi models.
 
 ## Setup for if you have a configured Raspberry Pi
 [ if not, see further down ]
