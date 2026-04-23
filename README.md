@@ -80,7 +80,7 @@ Software:
     ```
     and add the line
     ```
-    @reboot sudo ./main 192.168.2.1 9000 &
+    @reboot sudo Audio-to-MIDI-for-Raspberry-Pi/main 192.168.2.1 9000 &
 7.  Close the connection and power off the Pi
 8.  Follow the steps of the section further up
     
