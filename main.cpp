@@ -26,8 +26,8 @@ struct LowPassFilter
         return output;
     }
     float smoothing (float input){
-	float alpha = 0.2f;
-	return (alpha * input) + ((1.0f - alpha) * input);
+        float alpha = 0.2f;
+        return (alpha * input) + ((1.0f - alpha) * input);
     }
 };
 
@@ -40,15 +40,15 @@ struct ZeroCrossingDetector
     // checks for zero-crossing
     void process(float sample){
         if ((sample >= threshold && prevSample <  -threshold) ||
-    	    (sample <  -threshold && prevSample >= threshold)) {
+            (sample <  -threshold && prevSample >= threshold)) {
             count++;
-    	}
-    	prevSample = sample;
+        }
+        prevSample = sample;
     }
     
     // resets zero-crossing count
     void reset(){
-	count = 0;
+        count = 0;
     }
 };
 
@@ -56,7 +56,9 @@ struct AmplitudeCalculator
 {
     float sum = 0.0f;
     int count = 0;
-    float threshold = 0.05f;
+
+    float threshold = 0.08f;
+    float decayThreshold = 0.05f;
     float lastAmp = 0.0f;
 
     void add (float sample){
@@ -65,12 +67,12 @@ struct AmplitudeCalculator
     }
 
     float average(){
-	return sum / count;
+        return sum / (float)count;
     }
 
     void reset(){
-	sum = 0.0f;
-	count = 0;
+        sum = 0.0f;
+        count = 0;
     }
 };
 
@@ -81,21 +83,21 @@ int midiConversion (float freq){
 void sendNote(lo_address t, bool noteOn, int note, int velocity)
 {		    
     if (noteOn == true){
-        lo_message m1 = lo_message_new();
-	lo_message_add_int32(m1, 0x90); //0x is hexadecimal, 9 is note on standard and 8 is off, 0 is channel 1
-        lo_message_add_int32(m1, note);
-        lo_message_add_int32(m1, velocity);
-        lo_send_message(t, "/midi/noteon", m1);
-        lo_message_free(m1);
+        lo_message m = lo_message_new();
+        lo_message_add_int32(m, 0x90); //0x is hexadecimal, 9 is note on standard and 8 is off, 0 is channel 1
+        lo_message_add_int32(m, note);
+        lo_message_add_int32(m, velocity);
+        lo_send_message(t, "/midi/noteon", m);
+        lo_message_free(m);
         std::cout << "Sent Note On\n";
     }
     else {
-	lo_message m2 = lo_message_new();
-	lo_message_add_int32(m2, 0x80); //0x is hexadecimal, 9 is note on standard and 8 is off, 0 is channel 1
-	lo_message_add_int32(m2, note);
-	lo_message_add_int32(m2, velocity);
-        lo_send_message(t, "/midi/noteoff", m2);
-        lo_message_free(m2);
+        lo_message m = lo_message_new();
+        lo_message_add_int32(m, 0x80); //0x is hexadecimal, 9 is note on standard and 8 is off, 0 is channel 1
+        lo_message_add_int32(m, note);
+        lo_message_add_int32(m, velocity);
+        lo_send_message(t, "/midi/noteoff", m);
+        lo_message_free(m);
         std::cout << "Sent Note Off\n";
     }
 }
@@ -117,12 +119,13 @@ int main(int argc, char **argv){
 
     lo_address oscTarget = lo_address_new(ip, port);
     
-    // declares zero-crossing object and amplitude object
+    // declares struct objects
     ZeroCrossingDetector zeroCrossing;
     LowPassFilter LPF;
     AmplitudeCalculator ampCalc;
     
     int note, lastNote, velocity = 0;
+    bool noteOff = true;
 
     // 
     std::signal(SIGINT, handleSigInt);
@@ -228,66 +231,73 @@ int main(int argc, char **argv){
         //      buffer[2] = L1
         //      buffer[3] = R1
         //      ...
-        //
-        //  Do whatever processing you want here.
         // ------------------------------------------------------------------
 
         // Example: mono mix → your DSP → output to both channels
         for (size_t i = 0; i < periodSize; i++) {
-		// Convert stereo to  mono
-		int32_t L = buffer[i * 2];
-		int32_t R = buffer[i * 2 + 1];
-		int32_t mono = (L / 2) + (R / 2);
+                // Convert stereo to  mono
+                int32_t L = buffer[i * 2];
+                int32_t R = buffer[i * 2 + 1];
+                int32_t mono = (L / 2) + (R / 2);
 
 
-		// Convert 32-bit int to float
-		float f = (float)(mono / 2147483647.0f);
+                // Convert 32-bit int to float
+                float f = (float)(mono / 2147483647.0f);
                 
-		// Include current sample for amplitude calculation
-		ampCalc.add(f);
+                // Include current sample for amplitude calculation
+                ampCalc.add(f);
 
-		// Low-pass filter
-		f = LPF.filter(f);
+                // Low-pass filter
+                f = LPF.filter(f);
+                f = LPF.smoothing(f);
 
-		// Log zero-crossing
-		zeroCrossing.process(f);
+                // Log zero-crossing
+                zeroCrossing.process(f);
 
-		// Back to 32-bit integer
-		int32_t processed = (int32_t)(f * 2147483647.0f);
+                // Back to 32-bit integer
+                int32_t processed = (int32_t)(f * 2147483647.0f);
 
-		// Output to both channels
-		buffer[i * 2]     = processed;
-		buffer[i * 2 + 1] = processed;
+                // Output to both channels
+                buffer[i * 2]     = processed;
+                buffer[i * 2 + 1] = processed;
         }
         
-	// Calculate amplitude
-	float amplitude = ampCalc.average();
-	ampCalc.reset();
-	float ampDiff = amplitude - ampCalc.lastAmp;
-        //std::cout << amplitude << "\n";
+        // Calculate amplitude
+        float amplitude = ampCalc.average();
+        ampCalc.reset();
+
+	// Detect transient
+	bool transient = (amplitude - ampCalc.lastAmp) > ampCalc.threshold;
+        ampCalc.lastAmp = amplitude;
+        std::cout << amplitude << "amplitude\n";
         
-	// Trigger note on
-	if (amplitude >= ampCalc.threshold && note != lastNote){
+	// Calculate 
+        float duration = (float)periodSize / (float)SAMPLE_RATE;
+        float frequency = (zeroCrossing.count / 2.0f) / duration;
+        zeroCrossing.reset();
+
+        note = midiConversion(frequency) + 12;
+        
+        // Trigger note on if transient detected
+        if (transient == true){
+	    noteOff = false;
+
+	    // fraction-second note off
+            velocity = 0;
+            sendNote(oscTarget, false, lastNote, velocity);
+
 	    velocity = 100;
 
-	    float duration = (float)periodSize / (float)SAMPLE_RATE;
-	    float frequency = (zeroCrossing.count / 2.0f) / duration;
-            std::cout << frequency << "\n";
+            sendNote(oscTarget, true, note, velocity);
+            lastNote = note;
+        }
 
-	    note = midiConversion(frequency) + 12;
-            std::cout << note << "\n";
-
-	    sendNote(oscTarget, true, note, velocity);
-	    lastNote = note;
-	}
-	// Trigger note off
-	else if (amplitude < ampCalc.threshold && lastNote != 0){
-	    velocity = 0;
-	    sendNote(oscTarget, false, note, velocity);
-	    lastNote = 0;
-	}
-	zeroCrossing.reset();
-	ampCalc.lastAmp = amplitude;
+        // Trigger note off if note loudness is low enough and last note wasn't also a note off
+        else if (amplitude < ampCalc.decayThreshold && noteOff == false){
+            velocity = 0;
+            sendNote(oscTarget, false, lastNote, velocity);
+            noteOff = true;
+        }
 
         // PLAYBACK
         pcmReturn = snd_pcm_writei(pcmOut, buffer.data(), periodSize);
