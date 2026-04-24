@@ -34,7 +34,7 @@ _Exact instructions may differ per OS or version of Mac OS_
 9.	Making sure Pure Data is not already open, go to the cloned repository and open the Pure Data patch “osc_to_midi.pd” (When you see a window with boxes and lines connecting them, that means the patch has been opened successfully)
 10.	Under the “Media” tab, go to “MIDI Settings...” and change the output device to the MIDI device you created, then click “OK”
 11.	Plug your audio interface into the Raspberry Pi
-12.	Plug in the Raspberry Pi to a power source with the relevant power supply making sure that a solid red light and a flashing orange light appear on the Pi around the corner from the power cable
+12.	_Plug in the Raspberry Pi to a power source with the relevant power supply making sure that a solid red light and a flashing orange light appear on the Pi around the corner from the power cable_
 13.	Connect your computer to the Raspberry Pi with your ethernet cable and approve any dialogue boxes that may appear
 14.	In your computer’s network settings, find the ethernet connection (e.g. USB 10/100/1000 LAN) and click “Details”
 15.	Under TCP/IP, change “Configure IPv4” (Not IPv6) to “Manually” and change the IP address to “192.168.2.1”, leaving all other sections as their defaults
