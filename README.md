@@ -41,8 +41,7 @@ _Exact instructions may differ per OS or version of Mac OS_
 16.	Open Logic and create a “Software Instrument” track
 17.	Make sure that an appropriate instrument is loaded on the track
 18.	Plug your guitar or bass into the audio interface
-19.	If your guitar or bass has a tone control, make sure it’s rolled all the way off to help note accuracy
-20.	Make sure that the input gain on the audio interface is not all the way down and make adjustments until you get a suitable response in the DAW (e.g. turn up the input gain if it’s not sensitive enough, and turn it down if it’s too sensitive)
+19.	Make sure that the input gain on the audio interface is not all the way down and make adjustments until you get a suitable response in the DAW (e.g. turn up the input gain if it’s not sensitive enough, and turn it down if it’s too sensitive)
 
 ## Setup for if you want to configure your Raspberry Pi
 ### Requirements:
