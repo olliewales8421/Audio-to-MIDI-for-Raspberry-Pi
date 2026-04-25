@@ -9,33 +9,26 @@
 
 #define SAMPLE_RATE 48000
 
-struct LowPassFilter
-{ 
-    float prevOutput, prevInput = 0.0f;
+/////////////////////////////
+////CLASSES AND FUNCTIONS////
+/////////////////////////////
 
+class LowPassFilter
+{
+public:
     float filter (float input){
-        float freq = 100;
-        float x = tanf(M_PI * freq / (float)SAMPLE_RATE);
-
-        float output = ((x * input) + (x * prevInput)) - ((x-1) * prevOutput);
-        output /= (x+1);
-
-        prevOutput = output;
-        prevInput = input;
-
-        return output;
+        prevOutput = (alpha * input) + ((1.0f - alpha) * prevOutput);
+	return prevOutput;
     }
-    float smoothing (float input){
-        float alpha = 0.2f;
-        return (alpha * input) + ((1.0f - alpha) * input);
-    }
+
+    float prevOutput = 0.0f;
+    float alpha = 0.01f;
 };
 
-struct ZeroCrossingDetector
+class ZeroCrossingDetector
 {
-    float prevSample = 0.0f;
+public:
     int count = 0;
-    float threshold = 0.0f;
 
     // checks for zero-crossing
     void process(float sample){
@@ -50,15 +43,16 @@ struct ZeroCrossingDetector
     void reset(){
         count = 0;
     }
+private:
+    float prevSample = 0.0f;
+    float threshold = 0.0f;
 };
 
-struct AmplitudeCalculator
+class AmplitudeCalculator
 {
-    float sum = 0.0f;
-    int count = 0;
-
-    float threshold = 0.08f;
-    float decayThreshold = 0.05f;
+public:
+    float threshold = 0.03f;
+    float decayThreshold = 0.015f;
     float lastAmp = 0.0f;
 
     void add (float sample){
@@ -74,6 +68,9 @@ struct AmplitudeCalculator
         sum = 0.0f;
         count = 0;
     }
+private:
+    float sum = 0.0f;
+    int count = 0; 
 };
 
 int midiConversion (float freq){
@@ -102,13 +99,16 @@ void sendNote(lo_address t, bool noteOn, int note, int velocity)
     }
 }
 
+/////////////////
+////MAIN CODE////
+/////////////////
 
 std::atomic<bool> keepRunning(true);
 void handleSigInt(int) { keepRunning = false; }
 
 int main(int argc, char **argv){
     
-    // Prints error if arguments are not met
+    // Print error if arguments are not met
     if (argc < 3) {
         std::cerr << "Usage: " << argv[0] << " <ip> <port>\n";
         return 1;
@@ -119,7 +119,7 @@ int main(int argc, char **argv){
 
     lo_address oscTarget = lo_address_new(ip, port);
     
-    // declares struct objects
+    // Declare class objects
     ZeroCrossingDetector zeroCrossing;
     LowPassFilter LPF;
     AmplitudeCalculator ampCalc;
@@ -140,7 +140,7 @@ int main(int argc, char **argv){
     unsigned int sampleRate = SAMPLE_RATE;
     int channels = 2;    // stereo
 
-    // Low latency settings
+    // Set period and buffer size
     snd_pcm_uframes_t periodSize = 1280;
     snd_pcm_uframes_t bufferSize = periodSize * 3;
 
@@ -148,9 +148,8 @@ int main(int argc, char **argv){
     float print = 0;
     float value = 0;
 
-    // --------------------------
-    // SETUP CAPTURE
-    // --------------------------
+
+    // Setup audio in
     if ((pcmReturn = snd_pcm_open(&pcmIn, captureDevice, SND_PCM_STREAM_CAPTURE, 0)) < 0) {
         std::cerr << "Capture open error: " << snd_strerror(pcmReturn) << std::endl;
         return -1;
@@ -165,7 +164,6 @@ int main(int argc, char **argv){
     snd_pcm_hw_params_set_period_size_near(pcmIn, paramsIn, &periodSize, nullptr);
     snd_pcm_hw_params_set_buffer_size_near(pcmIn, paramsIn, &bufferSize);
     
-
     if ((pcmReturn = snd_pcm_hw_params(pcmIn, paramsIn)) < 0) {
         std::cerr << "Capture HW param error: " << snd_strerror(pcmReturn) << std::endl;
         return -1;
@@ -173,9 +171,8 @@ int main(int argc, char **argv){
 
     snd_pcm_hw_params_free(paramsIn);
 
-    // --------------------------
-    // SETUP PLAYBACK
-    // --------------------------
+
+    // Setup audio out
 
     // Prints error if playback device is not detected
     if ((pcmReturn = snd_pcm_open(&pcmOut, playbackDevice, SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
@@ -200,18 +197,14 @@ int main(int argc, char **argv){
     snd_pcm_hw_params_free(paramsOut);
 
 
-    // --------------------------
-    // AUDIO BUFFER (32-bit)
-    // --------------------------
+    // Audio buffer
+    
     std::vector<int32_t> buffer(periodSize * channels);
-
 
     std::cout << "Audio input/output running. Press Ctrl+C to stop.\n";
 
 
-    // --------------------------
-    // MAIN LOOP
-    // --------------------------
+    // Main loop
     while (keepRunning) {
 
         // Capture from input device
@@ -221,57 +214,51 @@ int main(int argc, char **argv){
     	    continue;
 	}
 
-        // ------------------------------------------------------------------
-        //  PROCESSING BLOCK (your "true output" comes from here)
-        //  ------------------------------------------------------
         //  buffer[] contains interleaved stereo samples in S32_LE format:
         //
         //      buffer[0] = L0
         //      buffer[1] = R0
         //      buffer[2] = L1
         //      buffer[3] = R1
-        //      ...
-        // ------------------------------------------------------------------
 
         // Example: mono mix → your DSP → output to both channels
         for (size_t i = 0; i < periodSize; i++) {
-                // Convert stereo to  mono
-                int32_t L = buffer[i * 2];
-                int32_t R = buffer[i * 2 + 1];
-                int32_t mono = (L / 2) + (R / 2);
+            // Convert stereo to  mono
+            int32_t L = buffer[i * 2];
+            int32_t R = buffer[i * 2 + 1];
+            int32_t mono = (L / 2) + (R / 2);
 
 
-                // Convert 32-bit int to float
-                float f = (float)(mono / 2147483647.0f);
+            // Convert 32-bit int to float
+            float f = (float)(mono / 2147483647.0f);
                 
-                // Include current sample for amplitude calculation
-                ampCalc.add(f);
+            // Include current sample for amplitude calculation
+            ampCalc.add(f);
 
-                // Low-pass filter
-                f = LPF.filter(f);
-                f = LPF.smoothing(f);
+            // Low-pass filter
+            f = LPF.filter(f);
 
-                // Log zero-crossing
-                zeroCrossing.process(f);
+            // Log zero-crossing
+            zeroCrossing.process(f);
 
-                // Back to 32-bit integer
-                int32_t processed = (int32_t)(f * 2147483647.0f);
+            // Back to 32-bit integer
+            int32_t processed = (int32_t)(f * 2147483647.0f);
 
-                // Output to both channels
-                buffer[i * 2]     = processed;
-                buffer[i * 2 + 1] = processed;
+            // Output to both channels
+            buffer[i * 2]     = processed;
+            buffer[i * 2 + 1] = processed;
         }
         
         // Calculate amplitude
         float amplitude = ampCalc.average();
-        ampCalc.reset();
+	ampCalc.reset();
 
-	// Detect transient
-	bool transient = (amplitude - ampCalc.lastAmp) > ampCalc.threshold;
+        // Detect transient
+        bool transient = (amplitude - ampCalc.lastAmp) > ampCalc.threshold;
         ampCalc.lastAmp = amplitude;
         std::cout << amplitude << "amplitude\n";
         
-	// Calculate 
+        // Calculate 
         float duration = (float)periodSize / (float)SAMPLE_RATE;
         float frequency = (zeroCrossing.count / 2.0f) / duration;
         zeroCrossing.reset();
@@ -280,13 +267,13 @@ int main(int argc, char **argv){
         
         // Trigger note on if transient detected
         if (transient == true){
-	    noteOff = false;
+            noteOff = false;
 
-	    // fraction-second note off
+            // fraction-second note off
             velocity = 0;
             sendNote(oscTarget, false, lastNote, velocity);
 
-	    velocity = 100;
+            velocity = 100;
 
             sendNote(oscTarget, true, note, velocity);
             lastNote = note;
@@ -299,7 +286,7 @@ int main(int argc, char **argv){
             noteOff = true;
         }
 
-        // PLAYBACK
+        // Playback
         pcmReturn = snd_pcm_writei(pcmOut, buffer.data(), periodSize);
         if (pcmReturn < 0) {
             snd_pcm_prepare(pcmOut);
