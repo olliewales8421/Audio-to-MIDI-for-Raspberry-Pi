@@ -14,13 +14,15 @@
 /////////////////////////////
 
 class LowPassFilter
+// EMA filter
+// Credit Geoffrey Hunter
 {
 public:
     float filter (float input){
     prevOutput = (alpha * input) + ((1.0f - alpha) * prevOutput);
     return prevOutput;
     }
-
+private:
     float prevOutput = 0.0f;
     float alpha = 0.01f;
 };
@@ -30,7 +32,7 @@ class ZeroCrossingDetector
 public:
     int count = 0;
 
-    // checks for zero-crossing
+    // Check for zero-crossing
     void process(float sample){
         if ((sample >= threshold && prevSample <  -threshold) ||
             (sample <  -threshold && prevSample >= threshold)) {
@@ -103,6 +105,8 @@ void sendNote(lo_address t, bool noteOn, int note, int velocity)
 ////MAIN CODE////
 /////////////////
 
+// Credit ChatGPT for the capture and playback code
+
 std::atomic<bool> keepRunning(true);
 void handleSigInt(int) { keepRunning = false; }
 
@@ -124,10 +128,10 @@ int main(int argc, char **argv){
     LowPassFilter LPF;
     AmplitudeCalculator ampCalc;
     
+    // Declare integral variables
     int note, lastNote, velocity = 0;
     bool noteOff = true;
 
-    // 
     std::signal(SIGINT, handleSigInt);
 
     // Audio interface hardware device
@@ -221,7 +225,6 @@ int main(int argc, char **argv){
         //      buffer[2] = L1
         //      buffer[3] = R1
 
-        // Example: mono mix → your DSP → output to both channels
         for (size_t i = 0; i < periodSize; i++) {
             // Convert stereo to  mono
             int32_t L = buffer[i * 2];
@@ -258,7 +261,7 @@ int main(int argc, char **argv){
         ampCalc.lastAmp = amplitude;
         std::cout << amplitude << "amplitude\n";
         
-        // Calculate 
+        // Calculate period size in seconds and frequency
         float duration = (float)periodSize / (float)SAMPLE_RATE;
         float frequency = (zeroCrossing.count / 2.0f) / duration;
         zeroCrossing.reset();
