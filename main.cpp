@@ -141,7 +141,7 @@ int main(int argc, char **argv){
     int channels = 2;    // stereo
 
     // Set period and buffer size
-    snd_pcm_uframes_t periodSize = 1280;
+    snd_pcm_uframes_t periodSize = 1280 * 3;
     snd_pcm_uframes_t bufferSize = periodSize * 3;
 
     int pcmReturn;
@@ -251,7 +251,7 @@ int main(int argc, char **argv){
         
         // Calculate amplitude
         float amplitude = ampCalc.average();
-	ampCalc.reset();
+        ampCalc.reset();
 
         // Detect transient
         bool transient = (amplitude - ampCalc.lastAmp) > ampCalc.threshold;
