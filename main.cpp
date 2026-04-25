@@ -17,8 +17,8 @@ class LowPassFilter
 {
 public:
     float filter (float input){
-        prevOutput = (alpha * input) + ((1.0f - alpha) * prevOutput);
-	return prevOutput;
+    prevOutput = (alpha * input) + ((1.0f - alpha) * prevOutput);
+    return prevOutput;
     }
 
     float prevOutput = 0.0f;
